@@ -2,9 +2,13 @@
 name = "slsk-mcp"
 version = "0.1.0"
 description = "Soulseek MCP server — search and download music via Model Context Protocol"
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 dependencies = [
-    "aioslsk==1.4.1",
+    # 1.4.1's message reader dies on a frame it cannot deserialize: the `MessageDeserializationError`
+    # handler logs the message it never bound, so it raises `UnboundLocalError` and the reader task ends.
+    # Nothing reports that, and the client answers every search with nothing for the rest of its life.
+    # 1.6.0 is the first release that binds the exception instead, and every symbol used here is present.
+    "aioslsk==1.7.1",
     "mcp>=1.0.0,<2",
     "pydantic>=2.0",
 ]

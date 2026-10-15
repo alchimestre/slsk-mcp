@@ -1,8 +1,21 @@
 # slsk-mcp
 
+> **Fork.** One change from [voidtype/slsk_mcp](https://github.com/voidtype/slsk_mcp): `aioslsk` is pinned to
+> 1.7.1 rather than 1.4.1.
+>
+> In 1.4.1 the message reader dies on any frame it cannot deserialize. The `MessageDeserializationError`
+> handler logs a variable that was never bound, so it raises `UnboundLocalError`, the reader task ends, and
+> nothing says so: the client answers every search with nothing for the rest of its life, and cannot log in
+> again either. It is reachable in normal use — a short read off the socket is enough, and it took out four
+> consecutive passes here after roughly forty searches each.
+>
+> 1.6.0 is the first release that binds the exception (`except MessageDeserializationError as exc`) and uses
+> `exc.proto_message`; 1.7.1 is taken because every symbol used here is present in it. Upstream `main` is
+> still 1.4.1.
+
 A [Model Context Protocol](https://modelcontextprotocol.io) server that gives any MCP-capable AI assistant the ability to **log in to Soulseek, search the network, and download files** — all through simple tool calls.
 
-Built on [aioslsk](https://pypi.org/project/aioslsk/) 1.4.x.
+Built on [aioslsk](https://pypi.org/project/aioslsk/) 1.7.x.
 
 ## Quick Start
 
