@@ -53,6 +53,24 @@ def test_share_directories_is_empty_when_unset(monkeypatch):
     assert _share_directories() == []
 
 
+def test_a_stop_logs_out_before_exiting(monkeypatch):
+    """A client that vanishes mid-session leaves the server holding it for minutes, and every login from
+    the account is refused until it lets go — so the exit has to leave the session, not the account bound."""
+    wrapper = SoulseekWrapper()
+    calls: list[str] = []
+
+    class FakeClient:
+        async def stop(self) -> None:
+            calls.append("stop")
+
+    wrapper._client = FakeClient()
+    monkeypatch.setattr(os, "_exit", lambda code: calls.append(f"exit:{code}"))
+
+    asyncio.run(wrapper._leave())
+
+    assert calls == ["stop", "exit:0"]
+
+
 def test_extract_attrs_none():
     attrs = _extract_attrs(None)
     assert attrs["bitrate"] is None

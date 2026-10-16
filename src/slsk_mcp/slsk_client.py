@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import os
+import signal
 import time
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
@@ -262,8 +263,36 @@ class SoulseekWrapper:
         self._download_sem = asyncio.Semaphore(self._max_concurrent_dl)
         # Invalidate downloads from previous sessions (transfer objects are dead)
         self._invalidate_stale_downloads()
+        self._install_stop_handler()
         logger.info("Login complete (session=%d, passive=%s)", self._session_id, self._passive_mode)
         return True, "Logged in successfully", self._passive_mode
+
+    def _install_stop_handler(self) -> None:
+        """Leave the session on the way out rather than vanishing from it.
+
+        A client that is killed mid-session leaves the server holding that session for minutes, and every
+        login from this account is refused or dropped until it lets go. SIGTERM is what a stop sends first,
+        so this is the exit a supervisor's `stop` gets.
+        """
+        loop = asyncio.get_running_loop()
+        for signum in (signal.SIGTERM, signal.SIGINT):
+            try:
+                loop.add_signal_handler(signum, self._on_stop_signal, signum)
+            except (NotImplementedError, RuntimeError):
+                pass        # a loop that cannot take handlers keeps the abrupt exit rather than failing here
+
+    def _on_stop_signal(self, signum: int) -> None:
+        logger.info("signal %d: logging out of Soulseek before exiting", signum)
+        asyncio.ensure_future(self._leave())
+
+    async def _leave(self) -> None:
+        """Log out, then exit. Bounded so a hanging shutdown cannot outlive the stop's own patience."""
+        try:
+            await asyncio.wait_for(self.logout(), timeout=2.5)
+            logger.info("logged out")
+        except Exception:
+            pass
+        os._exit(0)
 
     def _has_listening_ports(self) -> bool:
         """Check if the client has active listening connections."""
