@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import os
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -12,6 +13,7 @@ from slsk_mcp.slsk_client import (
     _parse_id,
     _file_extension,
     _extract_attrs,
+    _share_directories,
 )
 
 
@@ -34,6 +36,21 @@ def test_file_extension():
     assert _file_extension("Song.flac") == "flac"
     assert _file_extension("archive.tar.gz") == "gz"
     assert _file_extension("noext") == ""
+
+
+def test_share_directories_reads_the_variable(monkeypatch, tmp_path):
+    shared = tmp_path / "lossless"
+    shared.mkdir()
+    monkeypatch.setenv(
+        "SLSK_SHARE_DIRS", os.pathsep.join([str(shared), str(tmp_path / "gone")])
+    )
+
+    assert _share_directories() == [str(shared)]
+
+
+def test_share_directories_is_empty_when_unset(monkeypatch):
+    monkeypatch.delenv("SLSK_SHARE_DIRS", raising=False)
+    assert _share_directories() == []
 
 
 def test_extract_attrs_none():

@@ -12,7 +12,12 @@ from typing import Any, Dict, List, Optional, Tuple
 from collections import deque
 
 from aioslsk.client import SoulSeekClient
-from aioslsk.settings import Settings, CredentialsSettings, ListeningConnectionErrorMode
+from aioslsk.settings import (
+    Settings,
+    CredentialsSettings,
+    ListeningConnectionErrorMode,
+    SharedDirectorySettingEntry,
+)
 from aioslsk.search.model import SearchRequest as SlskSearchRequest
 from aioslsk.transfer.model import Transfer
 from aioslsk.commands import PrivateMessageCommand
@@ -80,6 +85,20 @@ def _parse_id(file_id: str) -> Tuple[str, str]:
 def _file_extension(filename: str) -> str:
     ext = filename.rsplit(".", 1)[-1] if "." in filename else ""
     return ext.lower()
+
+
+def _share_directories() -> List[str]:
+    """The directories to share, from SLSK_SHARE_DIRS (path-separator separated).
+
+    An entry that is not a directory is dropped, so a stale path in an env file narrows the shares instead
+    of being carried into the index.
+    """
+    entries = os.environ.get("SLSK_SHARE_DIRS", "").split(os.pathsep)
+    return [
+        str(candidate)
+        for candidate in (Path(entry).expanduser() for entry in entries if entry)
+        if candidate.is_dir()
+    ]
 
 
 def _extract_attrs(attributes: Any) -> Dict[str, Optional[int]]:
@@ -203,6 +222,16 @@ class SoulseekWrapper:
 
         download_dir = os.environ.get("SLSK_DOWNLOAD_DIR", "./downloads")
         settings.shares.download = download_dir
+
+        # Empty means the client reports zero shared files, which peers read as a leecher.
+        share_dirs = _share_directories()
+        settings.shares.directories = [
+            SharedDirectorySettingEntry(path=entry) for entry in share_dirs
+        ]
+        logger.info(
+            "Share dirs: %s",
+            ", ".join(share_dirs) if share_dirs else "none (this client shares nothing)",
+        )
 
         self._client = SoulSeekClient(settings)
 

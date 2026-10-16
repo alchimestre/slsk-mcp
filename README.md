@@ -34,6 +34,7 @@ uv run python -m slsk_mcp.server
 | `SLSK_USERNAME` | — | Auto-login username |
 | `SLSK_PASSWORD` | — | Auto-login password |
 | `SLSK_DOWNLOAD_DIR` | `./downloads` | Default download directory |
+| `SLSK_SHARE_DIRS` | — | Directories to share, separated by the platform's path separator (`:` on macOS and Linux, `;` on Windows). Empty shares nothing, and peers treat a client that reports no shared files as a leecher. |
 | `SLSK_LISTEN_PORT` | aioslsk default | Soulseek listening port |
 | `SLSK_OBFUSCATED_PORT` | aioslsk default | Obfuscated port |
 | `SLSK_SEARCH_TIMEOUT` | `7` | Seconds to wait for search results |
